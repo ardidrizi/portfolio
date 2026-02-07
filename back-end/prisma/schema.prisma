@@ -3,12 +3,12 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "postgres"
   url      = env("DATABASE_URL")
 }
 
 model Project {
-  id           String   @id @default(cuid())
+  id           String        @id @default(cuid())
   title        String
   description  String
   link         String?
@@ -16,13 +16,13 @@ model Project {
   image        String?
   tags         String?
   images       String?
-  category     String?  @default("Other")
+  category     String?       @default("Other")
   github_stars Int?
   github_forks Int?
-  published    Boolean  @default(true)
-  views        Int      @default(0)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  published    Boolean       @default(true)
+  views        Int           @default(0)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
   projectViews ProjectView[]
 }
 
