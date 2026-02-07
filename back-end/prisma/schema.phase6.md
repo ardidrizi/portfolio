@@ -1,0 +1,21 @@
+-- Phase 6: Admin Features Schema Addition
+-- Add draft projects support to Prisma
+
+-- In schema.prisma, update Project model:
+-- model Project {
+-- id String @id @default(cuid())
+-- title String
+-- description String
+-- link String?
+-- tech String?
+-- image String?
+-- tags String?
+-- images String?
+-- category String? @default("Other")
+-- github_stars Int?
+-- github_forks Int?
+-- published Boolean @default(true) -- NEW: Draft support
+-- views Int @default(0) -- NEW: Analytics
+-- createdAt DateTime @default(now())
+-- updatedAt DateTime @updatedAt -- NEW: Track updates
+-- }

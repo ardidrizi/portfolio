@@ -1,0 +1,87 @@
+name: Deploy to Netlify & Railway
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: "18"
+          cache: "npm"
+
+      - name: Install frontend dependencies
+        working-directory: ./front-end
+        run: npm ci
+
+      - name: Lint frontend
+        working-directory: ./front-end
+        run: npm run lint --if-present
+
+      - name: Build frontend
+        working-directory: ./front-end
+        run: npm run build
+
+      - name: Install backend dependencies
+        working-directory: ./back-end
+        run: npm ci
+
+      - name: Lint backend
+        working-directory: ./back-end
+        run: npm run lint --if-present
+
+  deploy-frontend:
+    needs: test
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: "18"
+          cache: "npm"
+
+      - name: Install dependencies
+        working-directory: ./front-end
+        run: npm ci
+
+      - name: Build
+        working-directory: ./front-end
+        run: npm run build
+
+      - name: Deploy to Netlify
+        uses: nwtgck/actions-netlify@v2.0
+        with:
+          publish-dir: "./front-end/dist"
+          production-branch: main
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          deploy-message: "Deploy from GitHub Actions"
+        env:
+          NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
+          NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
+
+  deploy-backend:
+    needs: test
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Deploy to Railway
+        uses: lincolnthree/actions-railway@v2
+        with:
+          token: ${{ secrets.RAILWAY_TOKEN }}
+          service: portfolio-backend
