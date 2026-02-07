@@ -29,5 +29,6 @@ model Project {
 model ProjectView {
   id        String   @id @default(cuid())
   projectId String
+  project   Project  @relation(fields: [projectId], references: [id])
   viewedAt  DateTime @default(now())
 }
