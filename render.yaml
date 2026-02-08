@@ -14,7 +14,7 @@ services:
       - key: DATABASE_URL
         value: file:/var/data/portfolio.db
       - key: CORS_ORIGIN
-        value: https://your-netlify-site.netlify.app
+        value: https://ardian-portfolio.netlify.app
       - key: GITHUB_TOKEN
         value: ""
       - key: GITHUB_USERNAME

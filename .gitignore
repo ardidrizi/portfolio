@@ -1,0 +1,30 @@
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# IDE/Editor
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Environment files (root level)
+.env
+.env.local
+.env.production
+
+# Secrets
+*.pem
+*.key
+*.cert
+secrets/
+
+# Logs
+*.log
+
+# Temporary
+tmp/
+temp/
+*.tmp

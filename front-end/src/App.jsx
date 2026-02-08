@@ -3,7 +3,8 @@ import ReactDOM from "react-dom";
 import "./App.css";
 
 const API_BASE_URL =
-  import.meta.env.VITE_API_BASE_URL || "http://localhost:5005";
+  import.meta.env.VITE_API_BASE_URL ||
+  (import.meta.env.PROD ? window.location.origin : "http://localhost:5005");
 
 const getInitialTheme = () => {
   const saved = localStorage.getItem("portfolio-theme");
@@ -44,6 +45,8 @@ const featuredProjects = [
 
 function App() {
   const [darkMode, setDarkMode] = useState(getInitialTheme);
+  const [apiAvailable, setApiAvailable] = useState(true);
+  const [apiMessage, setApiMessage] = useState("");
   const [projects, setProjects] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -171,9 +174,10 @@ function App() {
 
   // Fetch admin data when token changes
   useEffect(() => {
-    if (!adminToken) {
+    if (!adminToken || !apiAvailable) {
       setAdminProjects([]);
       setAdminStats({ total: 0, published: 0, drafts: 0, totalViews: 0 });
+      setAdminAnalytics({ mostViewed: [], recentViews: 0, viewsByDate: {} });
       return;
     }
 
@@ -192,7 +196,7 @@ function App() {
       setAdminProjects(projects);
       setAdminAnalytics(analytics);
     });
-  }, [adminToken]);
+  }, [adminToken, apiAvailable]);
 
   // Keyboard navigation
   useEffect(() => {
@@ -220,7 +224,31 @@ function App() {
   }, [galleryOpen]);
 
   useEffect(() => {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 6000);
+
     const load = async () => {
+      try {
+        const healthRes = await fetch(`${API_BASE_URL}/api/health`, {
+          signal: controller.signal,
+        });
+
+        if (!healthRes.ok) {
+          throw new Error("Backend unavailable");
+        }
+
+        setApiAvailable(true);
+        setApiMessage("");
+      } catch (err) {
+        setApiAvailable(false);
+        setApiMessage(
+          "Backend unavailable. Some features are disabled. Check VITE_API_BASE_URL and backend status.",
+        );
+        setError("Backend unavailable. Please try again later.");
+        setLoading(false);
+        return;
+      }
+
       try {
         const res = await fetch(`${API_BASE_URL}/api/projects`);
         if (!res.ok) throw new Error("Failed to fetch projects");
@@ -234,6 +262,11 @@ function App() {
     };
 
     load();
+
+    return () => {
+      clearTimeout(timeoutId);
+      controller.abort();
+    };
   }, []);
 
   const handleChange = useCallback((e) => {
@@ -243,6 +276,10 @@ function App() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!apiAvailable) {
+      setFormError("Backend unavailable. Please try again later.");
+      return;
+    }
     if (!form.title || !form.description) {
       setFormError("Title and description are required");
       return;
@@ -283,7 +320,40 @@ function App() {
     }
   };
 
+  const handleDelete = async (id) => {
+    if (!apiAvailable) {
+      alert("Backend unavailable. Please try again later.");
+      return;
+    }
+    const confirmDelete = window.confirm(
+      "Delete this project? This cannot be undone.",
+    );
+    if (!confirmDelete) return;
+
+    try {
+      setDeletingId(id);
+      const res = await fetch(`${API_BASE_URL}/api/projects/${id}`, {
+        method: "DELETE",
+      });
+
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.error || "Failed to delete project");
+      }
+
+      setProjects((prev) => prev.filter((p) => p.id !== id));
+    } catch (err) {
+      alert(err.message || "Failed to delete project");
+    } finally {
+      setDeletingId("");
+    }
+  };
+
   const handleGithubSync = async () => {
+    if (!apiAvailable) {
+      alert("Backend unavailable. Please try again later.");
+      return;
+    }
     setSyncingGithub(true);
     try {
       const res = await fetch(`${API_BASE_URL}/api/projects/sync-github`, {
@@ -335,6 +405,10 @@ function App() {
 
   const handleContactSubmit = async (e) => {
     e.preventDefault();
+    if (!apiAvailable) {
+      setContactMessage("✗ Backend unavailable. Please try again later.");
+      return;
+    }
     setContactSubmitting(true);
     setContactMessage("");
 
@@ -362,29 +436,29 @@ function App() {
   };
 
   // Track project view when link is clicked
-  const trackProjectView = useCallback((projectId) => {
-    fetch(`${API_BASE_URL}/api/projects/${projectId}/view`, {
-      method: "POST",
-    }).catch(() => {
-      // Silently fail - don't interrupt user experience
-    });
-  }, []);
+  const trackProjectView = useCallback(
+    (projectId) => {
+      if (!apiAvailable) return;
+      fetch(`${API_BASE_URL}/api/projects/${projectId}/view`, {
+        method: "POST",
+      }).catch(() => {
+        // Silently fail - don't interrupt user experience
+      });
+    },
+    [apiAvailable],
+  );
 
   // Get all unique tags from projects (memoized)
   const allTags = useMemo(
     () =>
-      Array.from(
-        new Set(projects.flatMap((p) => parseTags(p.tags)).sort()),
-      ),
+      Array.from(new Set(projects.flatMap((p) => parseTags(p.tags)).sort())),
     [projects],
   );
 
   // Get all unique categories from projects (memoized)
   const allCategories = useMemo(
     () =>
-      Array.from(
-        new Set(projects.map((p) => p.category || "Other").sort()),
-      ),
+      Array.from(new Set(projects.map((p) => p.category || "Other").sort())),
     [projects],
   );
 
@@ -396,7 +470,7 @@ function App() {
         if (!adminToken && !project.published) {
           return false;
         }
-        
+
         const matchesTag =
           !selectedTag || parseTags(project.tags).includes(selectedTag);
         const matchesSearch =
@@ -459,6 +533,11 @@ function App() {
 
   return (
     <div className="app" role="application" aria-label="Portfolio website">
+      {!apiAvailable && apiMessage && (
+        <div className="api-banner" role="status" aria-live="polite">
+          {apiMessage}
+        </div>
+      )}
       <nav className="top-nav" aria-label="Main navigation">
         <div className="nav-links">
           <a href="#about">About</a>
@@ -478,7 +557,9 @@ function App() {
         {!adminToken && (
           <button
             className="theme-toggle"
+            disabled={!apiAvailable}
             onClick={() => {
+              if (!apiAvailable) return;
               const token = prompt("Admin password:");
               if (token) {
                 setAdminToken(token);
@@ -494,6 +575,7 @@ function App() {
         {adminToken && (
           <button
             className="theme-toggle"
+            disabled={!apiAvailable}
             onClick={() => setShowAdminDash(!showAdminDash)}
             title="Toggle admin dashboard"
             aria-label="Toggle admin dashboard"
@@ -602,13 +684,21 @@ function App() {
         </div>
       </section>
 
-      <section id="projects" className="section" aria-label="Projects portfolio">
+      <section
+        id="projects"
+        className="section"
+        aria-label="Projects portfolio"
+      >
         <h2>Projects</h2>
         <div className="featured-projects">
           <h3>Featured projects</h3>
           <div className="projects-grid" role="list">
             {featuredProjects.map((proj) => (
-              <article key={proj.title} className="project-card" role="listitem">
+              <article
+                key={proj.title}
+                className="project-card"
+                role="listitem"
+              >
                 <header className="project-card-header">
                   <h3>{proj.title}</h3>
                 </header>
@@ -635,6 +725,7 @@ function App() {
         {/* Add Project Button */}
         <button
           className="add-project-btn"
+          disabled={!apiAvailable}
           onClick={() => setFormOpen(!formOpen)}
           aria-label={
             formOpen ? "Close add project form" : "Open add project form"
@@ -736,7 +827,13 @@ function App() {
                   </label>
 
                   {/* Publish */}
-                  <label style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                  <label
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "0.5rem",
+                    }}
+                  >
                     <input
                       type="checkbox"
                       name="published"
@@ -783,7 +880,7 @@ function App() {
         <button
           className="github-sync-button"
           onClick={handleGithubSync}
-          disabled={syncingGithub}
+          disabled={syncingGithub || !apiAvailable}
         >
           {syncingGithub ? "Syncing..." : "Sync from GitHub"}
         </button>
@@ -865,7 +962,11 @@ function App() {
         </div>
 
         {loading && (
-          <div className="projects-grid" aria-busy="true" aria-label="Loading projects">
+          <div
+            className="projects-grid"
+            aria-busy="true"
+            aria-label="Loading projects"
+          >
             {Array.from({ length: 6 }).map((_, i) => (
               <SkeletonCard key={i} />
             ))}
@@ -926,7 +1027,9 @@ function App() {
                         )}
                       </header>
                       {project.category && project.category !== "Other" && (
-                        <span className="project-category">{project.category}</span>
+                        <span className="project-category">
+                          {project.category}
+                        </span>
                       )}
                       {allImages.length > 0 && (
                         <div className="project-image-container">
@@ -1003,16 +1106,19 @@ function App() {
                           type="button"
                           className="project-delete-button"
                           onClick={() =>
-                            fetch(`${API_BASE_URL}/api/projects/${project.id}`, {
-                              method: "PATCH",
-                              headers: {
-                                "Content-Type": "application/json",
-                                "x-admin-token": adminToken,
+                            fetch(
+                              `${API_BASE_URL}/api/projects/${project.id}`,
+                              {
+                                method: "PATCH",
+                                headers: {
+                                  "Content-Type": "application/json",
+                                  "x-admin-token": adminToken,
+                                },
+                                body: JSON.stringify({
+                                  published: !project.published,
+                                }),
                               },
-                              body: JSON.stringify({
-                                published: !project.published,
-                              }),
-                            })
+                            )
                               .then(() => {
                                 setProjects((prev) =>
                                   prev.map((p) =>
@@ -1364,7 +1470,7 @@ function App() {
 
       <section id="contact" className="section">
         <h2>Contact</h2>
-        
+
         <form onSubmit={handleContactSubmit} className="contact-form">
           <div className="form-group">
             <label htmlFor="contact-name">Name</label>
@@ -1411,9 +1517,7 @@ function App() {
           {contactMessage && (
             <p
               className={`contact-message ${
-                contactMessage.startsWith("✓")
-                  ? "success"
-                  : "error"
+                contactMessage.startsWith("✓") ? "success" : "error"
               }`}
             >
               {contactMessage}
@@ -1422,7 +1526,7 @@ function App() {
 
           <button
             type="submit"
-            disabled={contactSubmitting}
+            disabled={contactSubmitting || !apiAvailable}
             className="contact-submit"
           >
             {contactSubmitting ? "Sending..." : "Send Message"}
@@ -1430,7 +1534,7 @@ function App() {
         </form>
 
         <hr />
-        
+
         <p>
           Best way to reach me:
           <br />
@@ -1450,135 +1554,159 @@ function App() {
       </section>
 
       {/* Admin Dashboard Modal - Render as Portal */}
-      {adminToken && showAdminDash && ReactDOM.createPortal(
-        <div
-          className="admin-modal-overlay"
-          onClick={() => setShowAdminDash(false)}
-        >
-          <div className="admin-modal" onClick={(e) => e.stopPropagation()}>
-            <button
-              className="admin-modal-close"
-              onClick={() => setShowAdminDash(false)}
-              aria-label="Close admin dashboard"
-            >
-              ✕
-            </button>
-
-            <h2>Admin Dashboard</h2>
-
-            {/* Stats Grid */}
-            <div className="admin-stats">
-              <div className="admin-stat-card">
-                <div className="stat-number">{adminStats.total}</div>
-                <div className="stat-label">Total Projects</div>
-              </div>
-              <div className="admin-stat-card">
-                <div className="stat-number" style={{ color: "#22c55e" }}>
-                  {adminStats.published}
-                </div>
-                <div className="stat-label">Published</div>
-              </div>
-              <div className="admin-stat-card">
-                <div className="stat-number" style={{ color: "#ef4444" }}>
-                  {adminStats.drafts}
-                </div>
-                <div className="stat-label">Drafts</div>
-              </div>
-              <div className="admin-stat-card">
-                <div className="stat-number">{adminStats.totalViews}</div>
-                <div className="stat-label">Total Views</div>
-              </div>
-            </div>
-
-            {/* Most Viewed Projects */}
-            <h3 style={{ marginTop: "2rem" }}>Most Viewed Projects</h3>
-            {adminAnalytics?.mostViewed?.length > 0 ? (
-              <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))",
-                  gap: "1rem",
-                  marginBottom: "2rem",
-                }}
+      {adminToken &&
+        showAdminDash &&
+        ReactDOM.createPortal(
+          <div
+            className="admin-modal-overlay"
+            onClick={() => setShowAdminDash(false)}
+          >
+            <div className="admin-modal" onClick={(e) => e.stopPropagation()}>
+              <button
+                className="admin-modal-close"
+                onClick={() => setShowAdminDash(false)}
+                aria-label="Close admin dashboard"
               >
-                {adminAnalytics.mostViewed.slice(0, 5).map((project) => (
-                  <div
-                    key={project.id}
-                    style={{
-                      background: "linear-gradient(135deg, var(--bg-primary), var(--bg-secondary))",
-                      border: "1px solid var(--border)",
-                      borderRadius: "0.75rem",
-                      padding: "1rem",
-                      textAlign: "center",
-                    }}
-                  >
-                    <div style={{ fontWeight: "600", marginBottom: "0.5rem" }}>
-                      {project.title}
-                    </div>
-                    <div style={{ fontSize: "1.5rem", fontWeight: "bold", color: "#3b82f6" }}>
-                      {project.views}
-                    </div>
-                    <div style={{ fontSize: "0.85rem", color: "var(--text-secondary)" }}>
-                      views
-                    </div>
+                ✕
+              </button>
+
+              <h2>Admin Dashboard</h2>
+
+              {/* Stats Grid */}
+              <div className="admin-stats">
+                <div className="admin-stat-card">
+                  <div className="stat-number">{adminStats.total}</div>
+                  <div className="stat-label">Total Projects</div>
+                </div>
+                <div className="admin-stat-card">
+                  <div className="stat-number" style={{ color: "#22c55e" }}>
+                    {adminStats.published}
                   </div>
-                ))}
+                  <div className="stat-label">Published</div>
+                </div>
+                <div className="admin-stat-card">
+                  <div className="stat-number" style={{ color: "#ef4444" }}>
+                    {adminStats.drafts}
+                  </div>
+                  <div className="stat-label">Drafts</div>
+                </div>
+                <div className="admin-stat-card">
+                  <div className="stat-number">{adminStats.totalViews}</div>
+                  <div className="stat-label">Total Views</div>
+                </div>
               </div>
-            ) : (
-              <p style={{ color: "var(--text-secondary)", marginBottom: "2rem" }}>
-                No views yet
-              </p>
-            )}
 
-            {/* Projects Table */}
-            <h3 style={{ marginTop: "2rem" }}>All Projects</h3>
-            <div className="admin-table-container">
-              <table className="admin-table">
-                <thead>
-                  <tr>
-                    <th>Title</th>
-                    <th>Status</th>
-                    <th>Category</th>
-                    <th>Views</th>
-                    <th>Created</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {adminProjects.map((project) => (
-                    <tr key={project.id}>
-                      <td style={{ fontWeight: "500" }}>{project.title}</td>
-                      <td>
-                        <span
-                          style={{
-                            padding: "0.25rem 0.5rem",
-                            borderRadius: "4px",
-                            fontSize: "0.85rem",
-                            background: project.published
-                              ? "#d1fae5"
-                              : "#fee2e2",
-                            color: project.published ? "#065f46" : "#7f1d1d",
-                          }}
-                        >
-                          {project.published ? "Published" : "Draft"}
-                        </span>
-                      </td>
-                      <td>{project.category || "Other"}</td>
-                      <td>{project.views || 0}</td>
-                      <td style={{ fontSize: "0.9rem" }}>
-                        {formatDate(project.createdAt)}
-                      </td>
-                    </tr>
+              {/* Most Viewed Projects */}
+              <h3 style={{ marginTop: "2rem" }}>Most Viewed Projects</h3>
+              {adminAnalytics?.mostViewed?.length > 0 ? (
+                <div
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))",
+                    gap: "1rem",
+                    marginBottom: "2rem",
+                  }}
+                >
+                  {adminAnalytics.mostViewed.slice(0, 5).map((project) => (
+                    <div
+                      key={project.id}
+                      style={{
+                        background:
+                          "linear-gradient(135deg, var(--bg-primary), var(--bg-secondary))",
+                        border: "1px solid var(--border)",
+                        borderRadius: "0.75rem",
+                        padding: "1rem",
+                        textAlign: "center",
+                      }}
+                    >
+                      <div
+                        style={{ fontWeight: "600", marginBottom: "0.5rem" }}
+                      >
+                        {project.title}
+                      </div>
+                      <div
+                        style={{
+                          fontSize: "1.5rem",
+                          fontWeight: "bold",
+                          color: "#3b82f6",
+                        }}
+                      >
+                        {project.views}
+                      </div>
+                      <div
+                        style={{
+                          fontSize: "0.85rem",
+                          color: "var(--text-secondary)",
+                        }}
+                      >
+                        views
+                      </div>
+                    </div>
                   ))}
-                </tbody>
-              </table>
-            </div>
+                </div>
+              ) : (
+                <p
+                  style={{
+                    color: "var(--text-secondary)",
+                    marginBottom: "2rem",
+                  }}
+                >
+                  No views yet
+                </p>
+              )}
 
-            <p style={{ marginTop: "1rem", fontSize: "0.9rem", opacity: 0.7 }}>
-              {adminProjects.length} projects total
-            </p>
-          </div>
-        </div>
-      , document.body)}
+              {/* Projects Table */}
+              <h3 style={{ marginTop: "2rem" }}>All Projects</h3>
+              <div className="admin-table-container">
+                <table className="admin-table">
+                  <thead>
+                    <tr>
+                      <th>Title</th>
+                      <th>Status</th>
+                      <th>Category</th>
+                      <th>Views</th>
+                      <th>Created</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {adminProjects.map((project) => (
+                      <tr key={project.id}>
+                        <td style={{ fontWeight: "500" }}>{project.title}</td>
+                        <td>
+                          <span
+                            style={{
+                              padding: "0.25rem 0.5rem",
+                              borderRadius: "4px",
+                              fontSize: "0.85rem",
+                              background: project.published
+                                ? "#d1fae5"
+                                : "#fee2e2",
+                              color: project.published ? "#065f46" : "#7f1d1d",
+                            }}
+                          >
+                            {project.published ? "Published" : "Draft"}
+                          </span>
+                        </td>
+                        <td>{project.category || "Other"}</td>
+                        <td>{project.views || 0}</td>
+                        <td style={{ fontSize: "0.9rem" }}>
+                          {formatDate(project.createdAt)}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              <p
+                style={{ marginTop: "1rem", fontSize: "0.9rem", opacity: 0.7 }}
+              >
+                {adminProjects.length} projects total
+              </p>
+            </div>
+          </div>,
+          document.body,
+        )}
     </div>
   );
 }

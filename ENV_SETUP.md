@@ -27,21 +27,21 @@ NODE_ENV=development
 
 Set environment variables in Netlify dashboard:
 
-- `VITE_API_BASE_URL` → Your Railway backend URL
+- `VITE_API_BASE_URL` → `https://portfolio-5q3f.onrender.com`
 - `NODE_ENV` → `production`
 
-### Railway (Backend)
+### Render (Backend)
 
-Set environment variables in Railway dashboard:
+Set environment variables in Render dashboard:
 
-- `DATABASE_URL` → PostgreSQL connection string
-- `CORS_ORIGIN` → Your Netlify frontend URL
+- `DATABASE_URL` → `file:/var/data/portfolio.db` (SQLite on disk) or PostgreSQL connection string
+- `CORS_ORIGIN` → `https://ardian-portfolio.netlify.app`
 - `GITHUB_TOKEN` → Your GitHub PAT
 - `GITHUB_USERNAME` → Your GitHub username
 - `EMAIL_USER` → Sender email address
 - `EMAIL_PASSWORD` → Gmail app password
 - `NODE_ENV` → `production`
-- `PORT` → 8080 (default)
+- `PORT` → 10000 (Render default)
 
 ## Security Notes
 
