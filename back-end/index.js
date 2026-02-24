@@ -47,6 +47,11 @@ app.use((req, res, next) => {
   next();
 });
 
+const handleServerError = (res, error, logMessage, clientMessage) => {
+  console.error(logMessage, error);
+  res.status(500).json({ error: clientMessage });
+};
+
 // Routes
 app.post("/api/projects", async (req, res) => {
   const {
@@ -211,8 +216,12 @@ app.get("/api/admin/stats", adminAuth, async (req, res) => {
       totalViews: 0, // TODO: Re-enable after database migration
     });
   } catch (error) {
-    console.error("Error fetching admin stats:", error);
-    res.status(500).json({ error: "Failed to fetch stats" });
+    handleServerError(
+      res,
+      error,
+      "Error fetching admin stats:",
+      "Failed to fetch stats",
+    );
   }
 });
 
@@ -224,8 +233,12 @@ app.get("/api/admin/projects", adminAuth, async (req, res) => {
     });
     res.json(projects);
   } catch (error) {
-    console.error("Error fetching all projects:", error);
-    res.status(500).json({ error: "Failed to fetch projects" });
+    handleServerError(
+      res,
+      error,
+      "Error fetching all projects:",
+      "Failed to fetch projects",
+    );
   }
 });
 
@@ -289,8 +302,12 @@ app.get("/api/admin/analytics", adminAuth, async (req, res) => {
     });
     */
   } catch (error) {
-    console.error("Error fetching analytics:", error);
-    res.status(500).json({ error: "Failed to fetch analytics" });
+    handleServerError(
+      res,
+      error,
+      "Error fetching analytics:",
+      "Failed to fetch analytics",
+    );
   }
 });
 
