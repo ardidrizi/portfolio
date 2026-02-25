@@ -1,19 +1,25 @@
-import { Link } from "../lib/router.jsx";
-import Seo from "../components/Seo.jsx";
-import ProjectCard from "../components/ProjectCard.jsx";
-import { projects } from "../data/projects.ts";
+import { Link } from '../lib/router.jsx'
+import Seo from '../components/Seo.jsx'
+import ProjectCard from '../components/ProjectCard.jsx'
+import { projects } from '../data/projects.ts'
 
-const skills = [
-  "React",
-  "TypeScript",
-  "JavaScript",
-  "Node.js",
-  "UX Collaboration",
-  "Testing",
-];
+const stack = [
+  'React',
+  'TypeScript',
+  'JavaScript',
+  'Node.js',
+  'Express',
+  'PostgreSQL',
+  'Prisma',
+  'REST APIs',
+  'Tailwind CSS',
+  'Accessibility',
+  'Testing',
+  'CI/CD',
+]
 
 function HomePage() {
-  const featured = projects.filter((project) => project.featured);
+  const featured = projects.filter((project) => project.featured)
 
   return (
     <>
@@ -24,10 +30,10 @@ function HomePage() {
       />
       <section className="hero">
         <p className="eyebrow">Hello, I&apos;m Ardian Idrizi</p>
-        <h1>I build thoughtful, fast, and accessible web experiences.</h1>
+        <h1>I build premium digital products with speed, clarity, and purpose.</h1>
         <p>
-          I&apos;m a fullstack developer focused on product outcomes turning
-          business goals into clean, user-centered interfaces.
+          Full-stack developer delivering polished interfaces and reliable systems that turn product strategy into
+          measurable outcomes.
         </p>
         <div className="hero-actions">
           <Link className="button primary" to="/projects">
@@ -46,6 +52,7 @@ function HomePage() {
             Browse all →
           </Link>
         </div>
+        <p className="small-text section-subtitle">A curated selection of product work with strong UX and technical depth.</p>
         <div className="project-grid">
           {featured.map((project) => (
             <ProjectCard key={project.slug} project={project} />
@@ -53,10 +60,13 @@ function HomePage() {
         </div>
       </section>
 
-      <section>
-        <h2>Core Skills</h2>
+      <section className="stack-section">
+        <div className="section-heading">
+          <h2>Skills &amp; Stack</h2>
+        </div>
+        <p className="small-text section-subtitle">Tools and technologies I use to ship maintainable, production-ready software.</p>
         <div className="tag-list">
-          {skills.map((skill) => (
+          {stack.map((skill) => (
             <span key={skill} className="tag">
               {skill}
             </span>
@@ -72,7 +82,7 @@ function HomePage() {
         </Link>
       </section>
     </>
-  );
+  )
 }
 
-export default HomePage;
+export default HomePage
