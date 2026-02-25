@@ -1380,3 +1380,21 @@ textarea:focus-visible {
 .admin-table tbody tr:last-child td {
   border-bottom: none;
 }
+
+.github-toggle-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+}
+
+.github-fallback-notice {
+  margin: 0 0 0.75rem;
+  color: var(--text-tertiary);
+}
+
+.github-repo-meta {
+  margin: 0.25rem 0 0.75rem;
+}
