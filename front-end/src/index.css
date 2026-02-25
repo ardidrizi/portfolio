@@ -326,11 +326,28 @@ textarea {
 .case-study {
   display: grid;
   gap: 1rem;
+  max-width: 760px;
+  margin: 0 auto;
 }
 
 .case-study header {
   display: grid;
   gap: 1rem;
+}
+
+.case-study section {
+  display: grid;
+  gap: 0.65rem;
+  padding: 1rem;
+  border: 1px solid #dbe3ef;
+  border-radius: 0.9rem;
+  background: #fff;
+}
+
+.case-study-screenshots {
+  display: grid;
+  gap: 0.8rem;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
 }
 
 .detail-image {

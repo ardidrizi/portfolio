@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { Link } from '../lib/router.jsx'
 import Seo from '../components/Seo.jsx'
 import ProjectCard from '../components/ProjectCard.jsx'
 import { projects as localProjects } from '../data/projects.ts'
@@ -15,9 +16,20 @@ function formatDate(value) {
 function GithubRepoCard({ project }) {
   return (
     <article className="project-card github-project-card">
+      {project.screenshots?.[0] ? (
+        <div className="project-image-wrap">
+          <img
+            src={project.screenshots[0]}
+            alt={`Primary screenshot for ${project.title}`}
+            className="project-image"
+            loading="lazy"
+            decoding="async"
+          />
+        </div>
+      ) : null}
       <div className="project-body">
         <h3>{project.title}</h3>
-        <p>{project.description}</p>
+        <p>{project.summary}</p>
         <div className="tag-list" aria-label="Repository tags">
           {project.tags.map((tag) => (
             <span key={`${project.repoUrl}-${tag}`} className="tag">
@@ -26,9 +38,15 @@ function GithubRepoCard({ project }) {
           ))}
         </div>
         <p className="small-text github-repo-meta">★ {project.stars} · Updated {formatDate(project.updatedAt)}</p>
-        <a href={project.repoUrl} className="text-link" target="_blank" rel="noreferrer noopener">
-          Open repository →
-        </a>
+        {project.slug ? (
+          <Link to={`/projects/${project.slug}`} className="text-link project-card-link">
+            View case study →
+          </Link>
+        ) : (
+          <a href={project.repoUrl} className="text-link" target="_blank" rel="noreferrer noopener">
+            Open repository →
+          </a>
+        )}
       </div>
     </article>
   )
@@ -75,15 +93,14 @@ function ProjectsPage() {
 
   const filteredProjects = useMemo(() => {
     return sourceProjects.filter((project) => {
-      const description = showGithubRepos ? project.description : project.summary
       const matchesTag = activeTag === 'All' || project.tags.includes(activeTag)
       const matchesSearch =
         project.title.toLowerCase().includes(search.toLowerCase()) ||
-        description.toLowerCase().includes(search.toLowerCase())
+        project.summary.toLowerCase().includes(search.toLowerCase())
 
       return matchesTag && matchesSearch
     })
-  }, [activeTag, search, showGithubRepos, sourceProjects])
+  }, [activeTag, search, sourceProjects])
 
   return (
     <>
