@@ -22,7 +22,7 @@ function ProjectCard({ project }) {
             </span>
           ))}
         </div>
-        <Link to={`/projects/${project.slug}`} className="text-link">
+        <Link to={`/projects/${project.slug}`} className="text-link project-card-link">
           View case study →
         </Link>
       </div>
