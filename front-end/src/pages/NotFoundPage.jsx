@@ -4,7 +4,7 @@ import Seo from '../components/Seo.jsx'
 function NotFoundPage() {
   return (
     <section>
-      <Seo title="Not Found" description="The requested page was not found." />
+      <Seo title="Not Found" description="The requested page was not found." path={window.location.pathname} />
       <h1>404</h1>
       <p>Sorry, this page does not exist.</p>
       <Link to="/" className="text-link">
