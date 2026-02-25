@@ -10,7 +10,11 @@ function ProjectDetailPage() {
   if (!project) {
     return (
       <section>
-        <Seo title="Project Not Found" description="Requested project case study was not found." />
+        <Seo
+          title="Project Not Found"
+          description="Requested project case study was not found."
+          path={window.location.pathname}
+        />
         <h1>Project not found</h1>
         <p>That case study does not exist yet.</p>
         <Link className="text-link" to="/projects">

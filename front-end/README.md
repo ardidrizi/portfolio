@@ -1,16 +1,42 @@
-# React + Vite
+# Portfolio Front-End (React + Vite)
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+This app is a single-page portfolio built with React and Vite.
 
-Currently, two official plugins are available:
+## Prerequisites
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+- Node.js 20+
+- npm 10+
 
-## React Compiler
+## Environment variables
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+Create a `.env.local` file in `front-end/` with:
 
-## Expanding the ESLint configuration
+```bash
+VITE_GITHUB_TOKEN=your_github_personal_access_token
+```
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+- `VITE_GITHUB_TOKEN` is optional but recommended to avoid low GitHub API rate limits when loading repositories.
+
+## Local development
+
+From the `front-end/` directory:
+
+```bash
+npm install
+npm run dev
+```
+
+Then open the local URL printed by Vite (usually `http://localhost:5173`).
+
+## Production build
+
+```bash
+npm run build
+npm run preview
+```
+
+## SEO and deployment notes
+
+- Per-page SEO tags are managed in `src/components/Seo.jsx`.
+- Static crawl files are available in `public/robots.txt` and `public/sitemap.xml`.
+- Netlify SPA fallback routing is configured in `public/_redirects` and root `netlify.toml`.

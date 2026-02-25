@@ -1,10 +1,19 @@
 import { useEffect } from 'react'
 
 const SITE_NAME = 'Portfolio'
+const DEFAULT_TITLE = 'Home'
 const DEFAULT_DESCRIPTION =
   'Personal portfolio showcasing projects, process, and engineering outcomes.'
 const DEFAULT_IMAGE =
   'https://images.unsplash.com/photo-1461749280684-dccba630e2f6?auto=format&fit=crop&w=1200&q=80'
+
+const getBaseUrl = () => {
+  if (typeof window !== 'undefined' && window.location?.origin) {
+    return window.location.origin
+  }
+
+  return 'https://example.com'
+}
 
 const upsertMeta = (attribute, key, content) => {
   const selector = `meta[${attribute}="${key}"]`
@@ -17,10 +26,11 @@ const upsertMeta = (attribute, key, content) => {
   tag.setAttribute('content', content)
 }
 
-function Seo({ title, description = DEFAULT_DESCRIPTION, image = DEFAULT_IMAGE, path = '' }) {
+function Seo({ title = DEFAULT_TITLE, description = DEFAULT_DESCRIPTION, image = DEFAULT_IMAGE, path = '' }) {
   useEffect(() => {
     const fullTitle = `${title} | ${SITE_NAME}`
-    const canonical = `https://example.com${path}`
+    const normalizedPath = path || window.location.pathname
+    const canonical = `${getBaseUrl()}${normalizedPath}`
 
     document.title = fullTitle
     upsertMeta('name', 'description', description)
