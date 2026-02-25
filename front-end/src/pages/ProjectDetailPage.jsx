@@ -1,12 +1,11 @@
-import { Link } from '../lib/router.jsx'
+import { Link, useRouter } from '../lib/router.jsx'
 import Seo from '../components/Seo.jsx'
-import { projects } from '../data/projects.ts'
-import { useRouter } from '../lib/router.jsx'
+import { getProjectBySlug } from '../data/projects.ts'
 
 function ProjectDetailPage() {
   const { pathname } = useRouter()
   const slug = pathname.replace('/projects/', '')
-  const project = projects.find((item) => item.slug === slug)
+  const project = getProjectBySlug(slug)
 
   if (!project) {
     return (
@@ -23,33 +22,45 @@ function ProjectDetailPage() {
 
   return (
     <>
-      <Seo title={project.title} description={project.summary} path={`/projects/${project.slug}`} image={project.image} />
-      <article className="case-study">
+      <Seo
+        title={project.title}
+        description={project.summary}
+        path={`/projects/${project.slug}`}
+        image={project.screenshots[0]}
+      />
+      <article className="case-study" aria-labelledby="case-study-title">
         <header>
           <p className="eyebrow">Case Study</p>
-          <h1>{project.title}</h1>
+          <h1 id="case-study-title">{project.title}</h1>
           <p>{project.summary}</p>
-          <img
-            src={project.image}
-            alt={`${project.title} preview`}
-            className="detail-image"
-            loading="lazy"
-            decoding="async"
-          />
         </header>
 
-        <section>
-          <h2>Problem</h2>
+        <section aria-labelledby="project-overview-title">
+          <h2 id="project-overview-title">Overview</h2>
+          <h3>Problem</h3>
           <p>{project.problem}</p>
-        </section>
-
-        <section>
-          <h2>Solution</h2>
+          <h3>Solution</h3>
           <p>{project.solution}</p>
         </section>
 
-        <section>
-          <h2>Stack</h2>
+        <section aria-labelledby="project-screenshots-title">
+          <h2 id="project-screenshots-title">Screenshots</h2>
+          <div className="case-study-screenshots">
+            {project.screenshots.map((screenshot) => (
+              <img
+                key={screenshot}
+                src={screenshot}
+                alt={`${project.title} screenshot`}
+                className="detail-image"
+                loading="lazy"
+                decoding="async"
+              />
+            ))}
+          </div>
+        </section>
+
+        <section aria-labelledby="project-stack-title">
+          <h2 id="project-stack-title">Stack</h2>
           <ul>
             {project.stack.map((item) => (
               <li key={item}>{item}</li>
@@ -57,8 +68,8 @@ function ProjectDetailPage() {
           </ul>
         </section>
 
-        <section>
-          <h2>Features</h2>
+        <section aria-labelledby="project-features-title">
+          <h2 id="project-features-title">Features</h2>
           <ul>
             {project.features.map((feature) => (
               <li key={feature}>{feature}</li>
@@ -66,26 +77,34 @@ function ProjectDetailPage() {
           </ul>
         </section>
 
-        <section>
-          <h2>Challenges</h2>
-          <p>{project.challenges}</p>
+        <section aria-labelledby="project-challenges-title">
+          <h2 id="project-challenges-title">Challenges</h2>
+          <ul>
+            {project.challenges.map((challenge) => (
+              <li key={challenge}>{challenge}</li>
+            ))}
+          </ul>
         </section>
 
-        <section>
-          <h2>Results</h2>
-          <p>{project.results}</p>
+        <section aria-labelledby="project-results-title">
+          <h2 id="project-results-title">Results</h2>
+          <ul>
+            {project.results.map((result) => (
+              <li key={result}>{result}</li>
+            ))}
+          </ul>
         </section>
 
-        <section>
-          <h2>Links</h2>
+        <section aria-labelledby="project-links-title">
+          <h2 id="project-links-title">Links</h2>
           <ul>
             <li>
-              <a href={project.links.demo} target="_blank" rel="noreferrer">
+              <a href={project.demoUrl} target="_blank" rel="noreferrer noopener">
                 Live demo
               </a>
             </li>
             <li>
-              <a href={project.links.repo} target="_blank" rel="noreferrer">
+              <a href={project.repoUrl} target="_blank" rel="noreferrer noopener">
                 Repository
               </a>
             </li>

@@ -5,7 +5,7 @@ function ProjectCard({ project }) {
     <article className="project-card">
       <div className="project-image-wrap">
         <img
-          src={project.image}
+          src={project.screenshots[0]}
           alt={`Preview of ${project.title}`}
           className="project-image"
           loading="lazy"
