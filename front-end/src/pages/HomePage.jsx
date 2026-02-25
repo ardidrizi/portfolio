@@ -1,12 +1,19 @@
-import { Link } from '../lib/router.jsx'
-import Seo from '../components/Seo.jsx'
-import ProjectCard from '../components/ProjectCard.jsx'
-import { projects } from '../data/projects.ts'
+import { Link } from "../lib/router.jsx";
+import Seo from "../components/Seo.jsx";
+import ProjectCard from "../components/ProjectCard.jsx";
+import { projects } from "../data/projects.ts";
 
-const skills = ['React', 'TypeScript', 'JavaScript', 'Node.js', 'UX Collaboration', 'Testing']
+const skills = [
+  "React",
+  "TypeScript",
+  "JavaScript",
+  "Node.js",
+  "UX Collaboration",
+  "Testing",
+];
 
 function HomePage() {
-  const featured = projects.filter((project) => project.featured)
+  const featured = projects.filter((project) => project.featured);
 
   return (
     <>
@@ -16,11 +23,11 @@ function HomePage() {
         path="/"
       />
       <section className="hero">
-        <p className="eyebrow">Hello, I&apos;m Your Name</p>
+        <p className="eyebrow">Hello, I&apos;m Ardian Idrizi</p>
         <h1>I build thoughtful, fast, and accessible web experiences.</h1>
         <p>
-          I&apos;m a front-end developer focused on product outcomes—turning business goals into clean,
-          user-centered interfaces.
+          I&apos;m a fullstack developer focused on product outcomes turning
+          business goals into clean, user-centered interfaces.
         </p>
         <div className="hero-actions">
           <Link className="button primary" to="/projects">
@@ -65,7 +72,7 @@ function HomePage() {
         </Link>
       </section>
     </>
-  )
+  );
 }
 
-export default HomePage
+export default HomePage;
