@@ -282,8 +282,8 @@
 
 ## Sign-Off
 
-**Tested By**: [Your Name]  
-**Date**: [Date]  
+**Tested By**: [Ardian Idrizi]  
+**Date**: [YYYY-MM-DD]  
 **Time Taken**: [Duration]  
 **Browser**: [Chrome/Firefox/Safari]  
 **OS**: [Windows/Mac/Linux]
