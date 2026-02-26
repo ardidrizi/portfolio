@@ -91,6 +91,6 @@ portfolio/
 
 ## Author
 
-- GitHub: https://github.com/<your-username>
-- LinkedIn: https://linkedin.com/in/<your-handle>
-- Email: <your-email>
+- GitHub: https://github.com/ardidrizi
+- LinkedIn: https://linkedin.com/in/ardidrizi
+- Email: ardianidizi@gmail.com
