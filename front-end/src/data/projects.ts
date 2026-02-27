@@ -3,20 +3,68 @@ export type Project = {
   repoName: string
   title: string
   summary: string
+  pitch?: string
+  target?: string
+  pain?: string
   tags: string[]
   screenshots: string[]
+  screenshotLabels?: string[]
   demoUrl: string
   repoUrl: string
   problem: string
   solution: string
   stack: string[]
+  architecture?: string[]
   features: string[]
   challenges: string[]
   results: string[]
+  nextSteps?: string[]
   featured: boolean
 }
 
 export const projects: Project[] = [
+  {
+    slug: 'seniorenalltagplus',
+    repoName: 'SeniorenAllTagPlus',
+    title: 'SeniorenAllTagPlus',
+    summary:
+      'A bridge between generations, connecting seniors with friends and compassionate volunteers while providing daily-life support services.',
+    pitch:
+      'A bridge between generations, connecting seniors with friends and compassionate volunteers while providing daily-life support services.',
+    target: 'Elderly individuals affected by loneliness',
+    pain: 'Loneliness and lack of accessible digital support',
+    screenshots: [],
+    screenshotLabels: [
+      'Authentication flow',
+      'Senior dashboard',
+      'Volunteer matching',
+      'Daily-life support services',
+    ],
+    tags: ['Rails', 'Full-stack', 'Auth', 'Heroku'],
+    demoUrl: 'https://senioren-all-tag-plus-c79d436cda54.herokuapp.com/users/sign_in',
+    repoUrl: 'https://github.com/ardidrizi/SeniorenAllTagPlus',
+    problem: 'Loneliness and lack of accessible digital support',
+    solution: 'Connect seniors with volunteers + provide services that improve daily life',
+    stack: ['Ruby on Rails', 'Devise', 'PostgreSQL (production) / SQLite (dev)'],
+    architecture: [
+      '[Browser client] → [Rails app + Devise auth] → [PostgreSQL (production) / SQLite (dev)]',
+      '[Rails controllers/views] ↔ [Service and matching logic] ↔ [Users, volunteers, support requests]',
+    ],
+    features: [
+      'Secure sign-in and account management for seniors and volunteers',
+      'Volunteer discovery and connection pathways to reduce social isolation',
+      'Daily-life support request workflows to coordinate practical help',
+      'Clear user journeys designed for accessibility and trust',
+    ],
+    challenges: ['TBD: Define technical and product tradeoffs after retrospective.'],
+    results: ['TBD: Capture validated outcomes without inventing metrics.'],
+    nextSteps: [
+      'Add guided onboarding for first-time senior users',
+      'Expand accessibility testing across assistive technologies',
+      'Add moderation and safety tooling for volunteer interactions',
+    ],
+    featured: true,
+  },
   {
     slug: 'saas-analytics-dashboard',
     repoName: 'saas-analytics-dashboard',
