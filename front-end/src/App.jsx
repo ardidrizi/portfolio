@@ -15,7 +15,7 @@ function App() {
 
   if (pathname === '/') page = <HomePage />
   if (pathname === '/projects') page = <ProjectsPage />
-  if (/^\/projects\/[^/]+$/.test(pathname)) page = <ProjectDetailPage />
+  if (/^\/projects\/[^/]+\/[^/]+$/.test(pathname)) page = <ProjectDetailPage />
   if (pathname === '/about') page = <AboutPage />
   if (pathname === '/resume') page = <ResumePage />
   if (pathname === '/contact') page = <ContactPage />
