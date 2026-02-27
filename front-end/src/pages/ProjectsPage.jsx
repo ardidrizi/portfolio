@@ -111,6 +111,13 @@ function ProjectsPage() {
                 <p className="small-text github-repo-meta">
                   ★ {project.stars} · Updated {formatDate(project.updatedAt)}
                 </p>
+                {project.homepageUrl ? (
+                  <p>
+                    <a className="text-link" href={project.homepageUrl} target="_blank" rel="noreferrer noopener">
+                      Live demo ↗
+                    </a>
+                  </p>
+                ) : null}
                 <Link to={getProjectRoute(project)} className="text-link project-card-link">
                   View case study →
                 </Link>
