@@ -1,7 +1,8 @@
+import { useEffect, useState } from 'react'
 import { Link } from '../lib/router.jsx'
 import Seo from '../components/Seo.jsx'
-import ProjectCard from '../components/ProjectCard.jsx'
-import { projects } from '../data/projects.ts'
+import { fetchProjects } from '../services/github.ts'
+import { getProjectRoute } from '../data/projects.ts'
 
 const stack = [
   'React',
@@ -19,15 +20,29 @@ const stack = [
 ]
 
 function HomePage() {
-  const featured = projects.filter((project) => project.featured)
+  const [featured, setFeatured] = useState([])
+
+  useEffect(() => {
+    let cancelled = false
+
+    fetchProjects()
+      .then((response) => {
+        if (cancelled) return
+        setFeatured(response.projects.slice(0, 4))
+      })
+      .catch(() => {
+        if (cancelled) return
+        setFeatured([])
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   return (
     <>
-      <Seo
-        title="Home"
-        description="Portfolio home featuring selected case studies, skills, and ways to connect."
-        path="/"
-      />
+      <Seo title="Home" description="Portfolio home featuring selected case studies, skills, and ways to connect." path="/" />
       <section className="hero">
         <p className="eyebrow">Hello, I&apos;m Ardian Idrizi</p>
         <h1>I build premium digital products with speed, clarity, and purpose.</h1>
@@ -55,7 +70,15 @@ function HomePage() {
         <p className="small-text section-subtitle">A curated selection of product work with strong UX and technical depth.</p>
         <div className="project-grid">
           {featured.map((project) => (
-            <ProjectCard key={project.slug} project={project} />
+            <article className="project-card github-project-card" key={project.id}>
+              <div className="project-body">
+                <h3>{project.title}</h3>
+                <p>{project.summary}</p>
+                <Link to={getProjectRoute(project)} className="text-link project-card-link">
+                  View case study →
+                </Link>
+              </div>
+            </article>
           ))}
         </div>
       </section>

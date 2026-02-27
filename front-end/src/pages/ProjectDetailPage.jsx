@@ -1,20 +1,51 @@
+import { useEffect, useMemo, useState } from 'react'
 import { Link, useRouter } from '../lib/router.jsx'
 import Seo from '../components/Seo.jsx'
-import { getProjectBySlug } from '../data/projects.ts'
+import { PROJECT_SECTION_ORDER, getProjectRoute } from '../data/projects.ts'
+import { fetchProjects } from '../services/github.ts'
 
 function ProjectDetailPage() {
   const { pathname } = useRouter()
-  const slug = pathname.replace('/projects/', '')
-  const project = getProjectBySlug(slug)
+  const [projects, setProjects] = useState([])
+  const [isLoading, setIsLoading] = useState(true)
+
+  useEffect(() => {
+    let cancelled = false
+
+    fetchProjects()
+      .then((response) => {
+        if (cancelled) return
+        setProjects(response.projects)
+        setIsLoading(false)
+      })
+      .catch(() => {
+        if (cancelled) return
+        setProjects([])
+        setIsLoading(false)
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  const pathParts = pathname.split('/').filter(Boolean)
+  const owner = pathParts[1] ?? ''
+  const repo = pathParts[2] ?? ''
+
+  const project = useMemo(
+    () => projects.find((item) => item.owner.toLowerCase() === owner.toLowerCase() && item.repo.toLowerCase() === repo.toLowerCase()),
+    [owner, projects, repo],
+  )
+
+  if (isLoading) {
+    return <section><p>Loading project…</p></section>
+  }
 
   if (!project) {
     return (
       <section>
-        <Seo
-          title="Project Not Found"
-          description="Requested project case study was not found."
-          path={window.location.pathname}
-        />
+        <Seo title="Project Not Found" description="Requested project case study was not found." path={window.location.pathname} />
         <h1>Project not found</h1>
         <p>That case study does not exist yet.</p>
         <Link className="text-link" to="/projects">
@@ -24,126 +55,52 @@ function ProjectDetailPage() {
     )
   }
 
-  const gallerySlots =
-    project.screenshots.length > 0
-      ? project.screenshots.map((src, index) => ({ src, label: `Screenshot ${index + 1}` }))
-      : (project.screenshotLabels ?? ['Screenshot 1', 'Screenshot 2', 'Screenshot 3']).map((label) => ({
-          src: '',
-          label,
-        }))
-
   return (
     <>
-      <Seo
-        title={project.title}
-        description={project.summary}
-        path={`/projects/${project.slug}`}
-        image={project.screenshots[0]}
-      />
+      <Seo title={project.title} description={project.summary} path={getProjectRoute(project)} />
       <article className="case-study" aria-labelledby="case-study-title">
         <header>
           <p className="eyebrow">Case Study</p>
           <h1 id="case-study-title">{project.title}</h1>
+          <p>{project.summary}</p>
         </header>
 
-        <section aria-labelledby="project-overview-title">
-          <h2 id="project-overview-title">Overview</h2>
-          <p>{project.pitch ?? project.summary}</p>
+        {PROJECT_SECTION_ORDER.map((sectionKey) => {
+          const section = project.sections[sectionKey]
+          if (!section.content.length) return null
+
+          return (
+            <section key={sectionKey} aria-labelledby={`section-${sectionKey}`}>
+              <h2 id={`section-${sectionKey}`}>{section.title}</h2>
+              {section.content.map((entry) => {
+                const isLink = sectionKey === 'links' && /^https?:\/\//i.test(entry)
+                if (isLink) {
+                  return (
+                    <p key={entry}>
+                      <a href={entry} target="_blank" rel="noreferrer noopener">
+                        {entry}
+                      </a>
+                    </p>
+                  )
+                }
+
+                return <p key={`${sectionKey}-${entry}`}>{entry}</p>
+              })}
+            </section>
+          )
+        })}
+
+        <section aria-labelledby="project-links-title">
+          <h2 id="project-links-title">Repository</h2>
           <div className="hero-actions" role="group" aria-label="Project links">
-            <a className="button primary" href={project.demoUrl} target="_blank" rel="noreferrer noopener">
-              View live demo
-            </a>
-            <a className="button" href={project.repoUrl} target="_blank" rel="noreferrer noopener">
+            <a className="button primary" href={project.repoUrl} target="_blank" rel="noreferrer noopener">
               View repository
             </a>
-          </div>
-        </section>
-
-        <section aria-labelledby="project-problem-title">
-          <h2 id="project-problem-title">Problem</h2>
-          <p>{project.pain ?? project.problem}</p>
-        </section>
-
-        <section aria-labelledby="project-target-title">
-          <h2 id="project-target-title">Target users</h2>
-          <p>{project.target ?? 'TBD'}</p>
-        </section>
-
-        <section aria-labelledby="project-solution-title">
-          <h2 id="project-solution-title">Solution</h2>
-          <p>{project.solution}</p>
-        </section>
-
-        <section aria-labelledby="project-features-title">
-          <h2 id="project-features-title">Key features</h2>
-          <ul>
-            {project.features.map((feature) => (
-              <li key={feature}>{feature}</li>
-            ))}
-          </ul>
-        </section>
-
-        <section aria-labelledby="project-stack-title" className="stack-section">
-          <h2 id="project-stack-title">Tech stack</h2>
-          <ul>
-            {project.stack.map((item) => (
-              <li key={item}>{item}</li>
-            ))}
-          </ul>
-        </section>
-
-        <section aria-labelledby="project-architecture-title">
-          <h2 id="project-architecture-title">Architecture</h2>
-          <pre className="architecture-diagram" aria-label="Architecture diagram">
-            {(project.architecture ?? ['TBD: Architecture diagram details pending.']).join('\n')}
-          </pre>
-        </section>
-
-        <section aria-labelledby="project-challenges-title">
-          <h2 id="project-challenges-title">Challenges &amp; tradeoffs</h2>
-          <ul>
-            {project.challenges.map((challenge) => (
-              <li key={challenge}>{challenge}</li>
-            ))}
-          </ul>
-        </section>
-
-        <section aria-labelledby="project-results-title">
-          <h2 id="project-results-title">Results</h2>
-          <ul>
-            {project.results.map((result) => (
-              <li key={result}>{result}</li>
-            ))}
-          </ul>
-        </section>
-
-        <section aria-labelledby="project-next-steps-title">
-          <h2 id="project-next-steps-title">Next steps</h2>
-          <ul>
-            {(project.nextSteps ?? ['TBD: Define implementation roadmap.']).map((step) => (
-              <li key={step}>{step}</li>
-            ))}
-          </ul>
-        </section>
-
-        <section aria-labelledby="project-screenshots-title">
-          <h2 id="project-screenshots-title">Screenshots gallery</h2>
-          <div className="case-study-screenshots" aria-label="Project screenshots gallery">
-            {gallerySlots.map((slot) =>
-              slot.src ? (
-                <figure className="screenshot-card" key={`${slot.label}-${slot.src}`}>
-                  <img src={slot.src} alt={`${project.title} ${slot.label}`} className="detail-image" loading="lazy" decoding="async" />
-                  <figcaption>{slot.label}</figcaption>
-                </figure>
-              ) : (
-                <figure className="screenshot-card" key={slot.label}>
-                  <div className="detail-image screenshot-placeholder" role="img" aria-label={`Placeholder for ${slot.label}`}>
-                    Placeholder
-                  </div>
-                  <figcaption>{slot.label}</figcaption>
-                </figure>
-              ),
-            )}
+            {project.homepageUrl ? (
+              <a className="button" href={project.homepageUrl} target="_blank" rel="noreferrer noopener">
+                View homepage
+              </a>
+            ) : null}
           </div>
         </section>
       </article>

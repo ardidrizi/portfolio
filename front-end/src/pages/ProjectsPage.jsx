@@ -1,9 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from '../lib/router.jsx'
 import Seo from '../components/Seo.jsx'
-import ProjectCard from '../components/ProjectCard.jsx'
-import { projects as localProjects } from '../data/projects.ts'
-import { fetchGithubProjects, getLocalProjectFallback } from '../services/github.ts'
+import { fetchProjects } from '../services/github.ts'
+import { getProjectRoute } from '../data/projects.ts'
 
 function formatDate(value) {
   return new Date(value).toLocaleDateString(undefined, {
@@ -13,130 +12,70 @@ function formatDate(value) {
   })
 }
 
-function GithubRepoCard({ project }) {
-  return (
-    <article className="project-card github-project-card">
-      {project.screenshots?.[0] ? (
-        <div className="project-image-wrap">
-          <img
-            src={project.screenshots[0]}
-            alt={`Primary screenshot for ${project.title}`}
-            className="project-image"
-            loading="lazy"
-            decoding="async"
-          />
-        </div>
-      ) : null}
-      <div className="project-body">
-        <h3>{project.title}</h3>
-        <p>{project.summary}</p>
-        <div className="tag-list" aria-label="Repository tags">
-          {project.tags.map((tag) => (
-            <span key={`${project.repoUrl}-${tag}`} className="tag">
-              {tag}
-            </span>
-          ))}
-        </div>
-        <p className="small-text github-repo-meta">★ {project.stars} · Updated {formatDate(project.updatedAt)}</p>
-        {project.slug ? (
-          <Link to={`/projects/${project.slug}`} className="text-link project-card-link">
-            View case study →
-          </Link>
-        ) : (
-          <a href={project.repoUrl} className="text-link" target="_blank" rel="noreferrer noopener">
-            Open repository →
-          </a>
-        )}
-      </div>
-    </article>
-  )
-}
-
 function ProjectsPage() {
   const [search, setSearch] = useState('')
   const [activeTag, setActiveTag] = useState('All')
-  const [showGithubRepos, setShowGithubRepos] = useState(true)
-  const [githubProjects, setGithubProjects] = useState([])
-  const [fallbackNotice, setFallbackNotice] = useState('')
+  const [projects, setProjects] = useState([])
+  const [notice, setNotice] = useState('')
+  const [errorMessage, setErrorMessage] = useState('')
 
   useEffect(() => {
-    if (!showGithubRepos) return
-
     let cancelled = false
 
-    async function loadGithubProjects() {
+    async function loadProjects() {
       try {
-        const repos = await fetchGithubProjects()
+        const response = await fetchProjects()
         if (cancelled) return
-        setGithubProjects(repos)
-        setFallbackNotice('')
+        setProjects(response.projects)
+        setNotice(response.notice ?? '')
+        setErrorMessage('')
       } catch {
         if (cancelled) return
-        setGithubProjects(getLocalProjectFallback())
-        setFallbackNotice('GitHub repositories are temporarily unavailable. Showing local projects instead.')
+        setErrorMessage('Unable to load projects from GitHub right now. Please try again in a moment.')
       }
     }
 
-    loadGithubProjects()
+    loadProjects()
 
     return () => {
       cancelled = true
     }
-  }, [showGithubRepos])
-
-  const sourceProjects = showGithubRepos ? githubProjects : localProjects
+  }, [])
 
   const tags = useMemo(() => {
-    const all = sourceProjects.flatMap((project) => project.tags)
+    const all = projects.flatMap((project) => project.tags)
     return ['All', ...new Set(all)]
-  }, [sourceProjects])
+  }, [projects])
 
-  const filteredProjects = useMemo(() => {
-    return sourceProjects.filter((project) => {
-      const matchesTag = activeTag === 'All' || project.tags.includes(activeTag)
-      const matchesSearch =
-        project.title.toLowerCase().includes(search.toLowerCase()) ||
-        project.summary.toLowerCase().includes(search.toLowerCase())
-
-      return matchesTag && matchesSearch
-    })
-  }, [activeTag, search, sourceProjects])
+  const filteredProjects = useMemo(
+    () =>
+      projects.filter((project) => {
+        const matchesTag = activeTag === 'All' || project.tags.includes(activeTag)
+        const q = search.toLowerCase()
+        const matchesSearch = project.title.toLowerCase().includes(q) || project.summary.toLowerCase().includes(q)
+        return matchesTag && matchesSearch
+      }),
+    [activeTag, projects, search],
+  )
 
   return (
     <>
-      <Seo
-        title="Projects"
-        description="Browse project case studies by keyword and technology tags."
-        path="/projects"
-      />
+      <Seo title="Projects" description="Browse project case studies by keyword and technology tags." path="/projects" />
       <section>
         <h1>Projects</h1>
-        <p>Use filters to find relevant case studies quickly.</p>
+        <p>Loaded from GitHub repositories and case study files.</p>
+        {notice ? <p className="small-text github-fallback-notice">{notice}</p> : null}
+        {errorMessage ? <p className="small-text github-fallback-notice">{errorMessage}</p> : null}
       </section>
 
       <section className="filters" aria-label="Project filters">
-        <label className="github-toggle-label" htmlFor="github-toggle">
-          <input
-            id="github-toggle"
-            type="checkbox"
-            checked={showGithubRepos}
-            onChange={(event) => {
-              setShowGithubRepos(event.target.checked)
-              setActiveTag('All')
-            }}
-          />
-          Show GitHub repos
-        </label>
-
-        {fallbackNotice ? <p className="small-text github-fallback-notice">{fallbackNotice}</p> : null}
-
         <label htmlFor="project-search" className="visually-hidden">
           Search projects
         </label>
         <input
           id="project-search"
           type="search"
-          placeholder={showGithubRepos ? 'Search repositories' : 'Search projects'}
+          placeholder="Search repositories"
           value={search}
           onChange={(event) => setSearch(event.target.value)}
         />
@@ -157,13 +96,27 @@ function ProjectsPage() {
       <section>
         <p className="small-text">{filteredProjects.length} result(s)</p>
         <div className="project-grid">
-          {filteredProjects.map((project) =>
-            showGithubRepos ? (
-              <GithubRepoCard key={project.repoUrl} project={project} />
-            ) : (
-              <ProjectCard key={project.slug} project={project} />
-            ),
-          )}
+          {filteredProjects.map((project) => (
+            <article className="project-card github-project-card" key={project.id}>
+              <div className="project-body">
+                <h3>{project.title}</h3>
+                <p>{project.summary}</p>
+                <div className="tag-list" aria-label="Repository tags">
+                  {project.tags.map((tag) => (
+                    <span key={`${project.id}-${tag}`} className="tag">
+                      {tag}
+                    </span>
+                  ))}
+                </div>
+                <p className="small-text github-repo-meta">
+                  ★ {project.stars} · Updated {formatDate(project.updatedAt)}
+                </p>
+                <Link to={getProjectRoute(project)} className="text-link project-card-link">
+                  View case study →
+                </Link>
+              </div>
+            </article>
+          ))}
         </div>
         {filteredProjects.length === 0 ? <p>No projects match your filters.</p> : null}
       </section>
