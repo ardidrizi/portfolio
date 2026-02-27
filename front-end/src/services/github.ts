@@ -46,6 +46,13 @@ type PinnedRepo = {
   repositoryTopics: { nodes: Array<{ topic: { name: string } }> }
 }
 
+type CaseStudyPayload = {
+  title?: string
+  summary?: string
+  description?: string
+  sections: ReturnType<typeof createEmptySections>
+}
+
 type PublicRepo = {
   name: string
   description: string | null
@@ -86,7 +93,7 @@ function safeArray(value: unknown): string[] {
   return value.filter((item): item is string => typeof item === 'string' && item.trim().length > 0)
 }
 
-function parseCaseStudyJson(jsonText: string, fallbackSummary: string) {
+function parseCaseStudyJson(jsonText: string, fallbackSummary: string): CaseStudyPayload {
   const parsed = JSON.parse(jsonText) as Record<string, unknown>
   const sections = createEmptySections()
 
@@ -115,11 +122,12 @@ function parseCaseStudyJson(jsonText: string, fallbackSummary: string) {
   return {
     title: typeof parsed.title === 'string' ? parsed.title : undefined,
     summary: typeof parsed.summary === 'string' ? parsed.summary : undefined,
+    description: typeof parsed.description === 'string' ? parsed.description : undefined,
     sections,
   }
 }
 
-function parseCaseStudyMarkdown(markdown: string, fallbackSummary: string) {
+function parseCaseStudyMarkdown(markdown: string, fallbackSummary: string): CaseStudyPayload {
   const sections = createEmptySections()
   let currentSection: ProjectSectionKey = 'overview'
 
@@ -144,6 +152,44 @@ function parseCaseStudyMarkdown(markdown: string, fallbackSummary: string) {
   return { sections }
 }
 
+function extractReadmeParagraph(readme: string): string | null {
+  const normalized = readme.replace(/\r/g, '')
+  const paragraphs = normalized.split(/\n\s*\n/)
+
+  for (const paragraph of paragraphs) {
+    const cleaned = paragraph
+      .trim()
+      .split('\n')
+      .map((line) => line.trim())
+      .filter((line) => line.length > 0 && !line.startsWith('#') && !line.startsWith('![') && !line.startsWith('```'))
+      .join(' ')
+      .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '$1')
+      .replace(/[*_`>~-]/g, '')
+      .trim()
+
+    if (cleaned.length >= 30) {
+      return cleaned
+    }
+  }
+
+  return null
+}
+
+async function fetchReadmeFallback(owner: string, repo: string, branch: string): Promise<string | null> {
+  const fileNames = ['README.md', 'Readme.md', 'readme.md']
+
+  for (const fileName of fileNames) {
+    const readmeUrl = `https://raw.githubusercontent.com/${owner}/${repo}/${branch}/${fileName}`
+    const response = await fetch(readmeUrl)
+    if (!response.ok) continue
+
+    const readme = await response.text()
+    return extractReadmeParagraph(readme)
+  }
+
+  return null
+}
+
 function buildMinimalSections(repo: Pick<Project, 'description' | 'homepageUrl' | 'repoUrl' | 'updatedAt'>) {
   const sections = createEmptySections()
   sections.overview.content = [repo.description || 'No repository description provided.']
@@ -153,7 +199,7 @@ function buildMinimalSections(repo: Pick<Project, 'description' | 'homepageUrl' 
   return sections
 }
 
-async function fetchCaseStudy(owner: string, repo: string, branch: string, fallbackSummary: string) {
+async function fetchCaseStudy(owner: string, repo: string, branch: string, fallbackSummary: string): Promise<CaseStudyPayload | null> {
   const jsonUrl = `https://raw.githubusercontent.com/${owner}/${repo}/${branch}/case-study.json`
   const markdownUrl = `https://raw.githubusercontent.com/${owner}/${repo}/${branch}/CASE_STUDY.md`
 
@@ -188,8 +234,8 @@ function toProject(repo: PinnedRepo | PublicRepo): Project {
     owner,
     repo: name,
     title: name,
-    summary: repo.description ?? 'No description provided.',
-    description: repo.description ?? '',
+    summary: (repo.description ?? '').trim() || 'No description provided.',
+    description: (repo.description ?? '').trim(),
     repoUrl: 'url' in repo ? repo.url : repo.html_url,
     homepageUrl: 'homepageUrl' in repo ? repo.homepageUrl : repo.homepage,
     stars: 'stargazerCount' in repo ? repo.stargazerCount : repo.stargazers_count,
@@ -280,6 +326,14 @@ export async function fetchProjects(): Promise<{ projects: Project[]; notice: st
     const mappedProjects = await Promise.all(
       sourceRepos.map(async (repo) => {
         const project = toProject(repo)
+        if (!project.description) {
+          const readmeSummary = await fetchReadmeFallback(project.owner, project.repo, project.defaultBranch)
+          if (readmeSummary) {
+            project.description = readmeSummary
+            project.summary = readmeSummary
+          }
+        }
+
         const caseStudy = await fetchCaseStudy(project.owner, project.repo, project.defaultBranch, project.summary)
 
         if (!caseStudy) {
@@ -290,6 +344,7 @@ export async function fetchProjects(): Promise<{ projects: Project[]; notice: st
         project.sections = caseStudy.sections
         project.title = caseStudy.title ?? project.title
         project.summary = caseStudy.summary ?? project.summary
+        project.description = caseStudy.description ?? project.description
         return project
       }),
     )
