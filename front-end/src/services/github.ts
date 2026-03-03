@@ -2,7 +2,7 @@ import { type Project, type ProjectSectionKey } from '../data/projects.ts'
 
 const GITHUB_USERNAME = 'ardidrizi'
 const GITHUB_GRAPHQL_URL = 'https://api.github.com/graphql'
-const GITHUB_REPOS_FALLBACK_URL = `https://api.github.com/users/${GITHUB_USERNAME}/repos?per_page=4&sort=updated`
+const EXCLUDED_REPOS = new Set(['portfolio', 'ardidrizi'])
 
 const SECTION_TITLES: Record<ProjectSectionKey, string> = {
   overview: 'Overview',
@@ -51,18 +51,6 @@ type CaseStudyPayload = {
   summary?: string
   description?: string
   sections: ReturnType<typeof createEmptySections>
-}
-
-type PublicRepo = {
-  name: string
-  description: string | null
-  html_url: string
-  homepage: string | null
-  stargazers_count: number
-  updated_at: string
-  owner: { login: string }
-  default_branch: string
-  topics?: string[]
 }
 
 let projectsCache: Project[] | null = null
@@ -222,12 +210,10 @@ async function fetchCaseStudy(owner: string, repo: string, branch: string, fallb
   return null
 }
 
-function toProject(repo: PinnedRepo | PublicRepo): Project {
-  const owner = 'owner' in repo ? repo.owner.login : GITHUB_USERNAME
+function toProject(repo: PinnedRepo): Project {
+  const owner = repo.owner.login
   const name = repo.name
-  const tags = 'repositoryTopics' in repo
-    ? repo.repositoryTopics.nodes.map((node) => node.topic.name)
-    : (repo.topics ?? [])
+  const tags = repo.repositoryTopics.nodes.map((node) => node.topic.name)
 
   return {
     id: `${owner}/${name}`,
@@ -236,12 +222,12 @@ function toProject(repo: PinnedRepo | PublicRepo): Project {
     title: name,
     summary: (repo.description ?? '').trim() || 'No description provided.',
     description: (repo.description ?? '').trim(),
-    repoUrl: 'url' in repo ? repo.url : repo.html_url,
-    homepageUrl: 'homepageUrl' in repo ? repo.homepageUrl : repo.homepage,
-    stars: 'stargazerCount' in repo ? repo.stargazerCount : repo.stargazers_count,
-    updatedAt: 'updatedAt' in repo ? repo.updatedAt : repo.updated_at,
+    repoUrl: repo.url,
+    homepageUrl: repo.homepageUrl,
+    stars: repo.stargazerCount,
+    updatedAt: repo.updatedAt,
     tags,
-    defaultBranch: 'defaultBranchRef' in repo ? repo.defaultBranchRef?.name ?? 'main' : repo.default_branch,
+    defaultBranch: repo.defaultBranchRef?.name ?? 'main',
     sections: createEmptySections(),
   }
 }
@@ -292,20 +278,7 @@ async function fetchPinnedRepos(token: string): Promise<PinnedRepo[]> {
   }
 
   const data = await response.json()
-  return data.data?.user?.pinnedItems?.nodes ?? []
-}
-
-async function fetchPublicRepos(): Promise<PublicRepo[]> {
-  const response = await fetch(GITHUB_REPOS_FALLBACK_URL, {
-    headers: { Accept: 'application/vnd.github+json' },
-  })
-
-  if (!response.ok) {
-    throw new Error(`GitHub REST request failed with status ${response.status}`)
-  }
-
-  const repos: PublicRepo[] = await response.json()
-  return repos.slice(0, 4)
+  return (data.data?.user?.pinnedItems?.nodes ?? []).filter((repo: PinnedRepo) => !EXCLUDED_REPOS.has(repo.name.toLowerCase()))
 }
 
 export async function fetchProjects(): Promise<{ projects: Project[]; notice: string | null }> {
@@ -314,14 +287,11 @@ export async function fetchProjects(): Promise<{ projects: Project[]; notice: st
 
   loadPromise = (async () => {
     const token = import.meta.env.VITE_GITHUB_TOKEN
-    let notice: string | null = null
+    if (!token) {
+      throw new Error('Missing VITE_GITHUB_TOKEN')
+    }
 
-    const sourceRepos = token
-      ? await fetchPinnedRepos(token)
-      : await fetchPublicRepos().then((repos) => {
-          notice = 'Pinned repositories require VITE_GITHUB_TOKEN. Showing latest public repositories instead.'
-          return repos
-        })
+    const sourceRepos = await fetchPinnedRepos(token)
 
     const mappedProjects = await Promise.all(
       sourceRepos.map(async (repo) => {
@@ -350,7 +320,7 @@ export async function fetchProjects(): Promise<{ projects: Project[]; notice: st
     )
 
     projectsCache = mappedProjects
-    return { projects: mappedProjects, notice }
+    return { projects: mappedProjects, notice: null }
   })()
 
   try {
