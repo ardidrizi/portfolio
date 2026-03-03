@@ -16,7 +16,6 @@ function ProjectsPage() {
   const [search, setSearch] = useState('')
   const [activeTag, setActiveTag] = useState('All')
   const [projects, setProjects] = useState([])
-  const [notice, setNotice] = useState('')
   const [errorMessage, setErrorMessage] = useState('')
 
   useEffect(() => {
@@ -27,11 +26,11 @@ function ProjectsPage() {
         const response = await fetchProjects()
         if (cancelled) return
         setProjects(response.projects)
-        setNotice(response.notice ?? '')
         setErrorMessage('')
       } catch {
         if (cancelled) return
-        setErrorMessage('Unable to load projects from GitHub right now. Please try again in a moment.')
+        setProjects([])
+        setErrorMessage('Unable to load pinned projects from GitHub right now.')
       }
     }
 
@@ -63,8 +62,7 @@ function ProjectsPage() {
       <Seo title="Projects" description="Browse project case studies by keyword and technology tags." path="/projects" />
       <section>
         <h1>Projects</h1>
-        <p>Loaded from GitHub repositories and case study files.</p>
-        {notice ? <p className="small-text github-fallback-notice">{notice}</p> : null}
+        <p>Loaded from pinned GitHub repositories.</p>
         {errorMessage ? <p className="small-text github-fallback-notice">{errorMessage}</p> : null}
       </section>
 
@@ -100,7 +98,7 @@ function ProjectsPage() {
             <article className="project-card github-project-card" key={project.id}>
               <div className="project-body">
                 <h3>{project.title}</h3>
-                <p>{project.summary}</p>
+                <p>{project.summary || 'No description provided for this repository yet.'}</p>
                 <div className="tag-list" aria-label="Repository tags">
                   {project.tags.map((tag) => (
                     <span key={`${project.id}-${tag}`} className="tag">
@@ -111,21 +109,24 @@ function ProjectsPage() {
                 <p className="small-text github-repo-meta">
                   ★ {project.stars} · Updated {formatDate(project.updatedAt)}
                 </p>
-                {project.homepageUrl ? (
-                  <p>
-                    <a className="text-link" href={project.homepageUrl} target="_blank" rel="noreferrer noopener">
-                      Live demo ↗
+                <div className="hero-actions">
+                  <a className="button" href={project.repoUrl} target="_blank" rel="noreferrer noopener">
+                    Repo
+                  </a>
+                  {project.homepageUrl ? (
+                    <a className="button primary" href={project.homepageUrl} target="_blank" rel="noreferrer noopener">
+                      Live
                     </a>
-                  </p>
-                ) : null}
-                <Link to={getProjectRoute(project)} className="text-link project-card-link">
-                  View case study →
-                </Link>
+                  ) : null}
+                  <Link to={getProjectRoute(project)} className="text-link project-card-link">
+                    View case study →
+                  </Link>
+                </div>
               </div>
             </article>
           ))}
         </div>
-        {filteredProjects.length === 0 ? <p>No projects match your filters.</p> : null}
+        {filteredProjects.length === 0 ? <p>{errorMessage || 'No projects match your filters.'}</p> : null}
       </section>
     </>
   )
