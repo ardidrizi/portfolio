@@ -1,96 +1,167 @@
-# Ardian Idrizi – Full-Stack Developer Portfolio
+# Ardian Idrizi Portfolio (Full-Stack)
 
 Live site: https://ardian-portfolio.netlify.app
 
-This repo powers my full-stack portfolio, showcasing frontend UI work, backend API design, and deployment on Netlify. It demonstrates a clean, production-ready React experience with optional API-backed project data via Express and Prisma.
+This repository contains a full-stack developer portfolio with:
+- A **React + Vite** frontend (custom client-side router, SEO metadata support, responsive pages)
+- An **Express + Prisma** backend (project CRUD, admin metrics, GitHub sync helper, contact form mailer)
+- Deployment-ready configuration for **Netlify** (frontend) and a Node host such as **Render** (backend)
+
+## Monorepo Layout
+
+```text
+portfolio/
+├── front-end/               # React app
+│   ├── public/              # static assets, redirects, SEO files
+│   └── src/
+│       ├── components/      # Layout, cards, SEO helpers
+│       ├── data/            # project types + route helpers
+│       ├── lib/             # lightweight router implementation
+│       ├── pages/           # Home, Projects, About, Resume, Contact, etc.
+│       └── services/        # GitHub project/case-study integration
+├── back-end/                # Express API + Prisma
+│   ├── prisma/              # schema + migrations
+│   └── index.js             # API server
+├── netlify.toml             # frontend deploy settings
+└── README.md
+```
 
 ## Tech Stack
 
-- Frontend: React, Vite, CSS
-- Backend: Node.js, Express, Prisma, SQLite
-- Deployment: Netlify
+### Frontend
+- React 19
+- Vite 7
+- Vanilla CSS
+- Custom SPA router (`front-end/src/lib/router.jsx`)
 
-## Features
+### Backend
+- Node.js + Express 5
+- Prisma ORM
+- PostgreSQL datasource (`DATABASE_URL`)
+- Nodemailer (contact form email delivery)
 
-- Recruiter-friendly single-page layout with clear sections and fast load times
-- Dynamic project data from a REST API (optional, if backend is running)
-- Mobile-responsive styling and accessible navigation
+## Frontend Features
 
-## Screenshots
+- Multi-page SPA experience:
+  - `/` Home
+  - `/projects` Project listing
+  - `/projects/:owner/:repo` Project detail page
+  - `/about`
+  - `/resume`
+  - `/contact`
+- SEO component support for page metadata.
+- GitHub-powered project ingestion logic with support for:
+  - pinned/public repository metadata
+  - optional `case-study.json` or `CASE_STUDY.md` parsing
+  - README summary extraction fallback
 
-Add images to [front-end/public/](front-end/public/) and reference them here:
+## Backend API
 
-- `screenshot-home.png`
-- `screenshot-projects.png`
-- `screenshot-contact.png`
+Base URL (local default): `http://localhost:4000`
+
+### Public endpoints
+- `GET /api/health`
+- `GET /api/projects`
+  - Optional query params: `tags`, `search`, `category`
+- `POST /api/projects`
+- `PATCH /api/projects/:id` (currently supports `published`, `views`)
+- `DELETE /api/projects/:id`
+- `POST /api/projects/:id/view`
+- `POST /api/projects/sync-github`
+- `POST /api/contact`
+
+### Admin endpoints (requires `x-admin-token`)
+- `GET /api/admin/stats`
+- `GET /api/admin/projects`
+- `GET /api/admin/analytics`
+
+For admin routes, set `x-admin-token` to the same value as `ADMIN_PASSWORD` in your backend environment config.
 
 ## Local Development
 
-### a) Clone
+### 1) Prerequisites
+- Node.js 20+ recommended
+- npm
+- A PostgreSQL database (local or hosted)
 
-```
-git clone <repo-url>
-cd portfolio
-```
+### 2) Backend setup
 
-### b) Frontend setup
-
-```
-cd front-end
-npm install
-npm run dev
-```
-
-### c) Backend setup (Optional)
-
-The backend is optional if you only need the frontend experience.
-
-```
+```bash
 cd back-end
 npm install
+```
+
+Create `back-end/.env`:
+
+```env
+PORT=4000
+DATABASE_URL="postgresql://USER:PASSWORD@HOST:5432/portfolio"
+CORS_ORIGIN="http://localhost:5173"
+ADMIN_PASSWORD="your_admin_secret"
+
+# Optional integrations
+GITHUB_TOKEN=""
+GITHUB_USERNAME="ardidrizi"
+EMAIL_USER=""
+EMAIL_PASSWORD=""
+```
+
+Run migrations + start backend:
+
+```bash
 npx prisma migrate dev
 npm run dev
 ```
 
-### d) Environment variables
+> Note: `npm run dev` uses `nodemon`. You can also run `npm start` for a plain Node process.
 
-- Frontend: create [front-end/.env](front-end/.env) as needed
-  - `VITE_API_BASE_URL=http://localhost:5005`
-- Backend: create [back-end/.env](back-end/.env)
-  - `DATABASE_URL="file:./dev.db"`
+### 3) Frontend setup
 
-## API Overview
-
-All routes are under `/api` (only when the backend is running).
-
-- `GET /api/health` -> `{ status: "ok" }`
-- `GET /api/projects` -> list projects
-- `POST /api/projects` -> create a project
-- `DELETE /api/projects/:id` -> delete a project
-
-Errors return `{ error: string }`.
-
-## Project Structure
-
+```bash
+cd front-end
+npm install
 ```
-portfolio/
-	front-end/
-		public/
-		src/
-			App.jsx
-			App.css
-			index.css
-			main.jsx
-	back-end/
-		prisma/
-			schema.prisma
-		index.js
-	README.md
-	netlify.toml
+
+Create `front-end/.env.local`:
+
+```env
+VITE_API_BASE_URL=http://localhost:4000
 ```
+
+Start frontend:
+
+```bash
+npm run dev
+```
+
+Frontend default dev URL: `http://localhost:5173`
+
+## Build Commands
+
+### Frontend
+```bash
+cd front-end
+npm run build
+npm run preview
+```
+
+### Backend
+```bash
+cd back-end
+npm start
+```
+
+## Deployment Notes
+
+- **Frontend**: configured by `netlify.toml`
+- **Backend**: configure host env vars (`DATABASE_URL`, `CORS_ORIGIN`, `ADMIN_PASSWORD`, and optional GitHub/email keys)
+- If deploying frontend and backend on separate domains, ensure backend `CORS_ORIGIN` includes the frontend origin.
+
+For extended environment and deployment docs, see:
+- `ENV_SETUP.md`
+- `DEPLOYMENT.md`
 
 ## Author
 
 - GitHub: https://github.com/ardidrizi
-- LinkedIn: https://linkedin.com/in/ardidrizi
-- Email: ardianidizi@gmail.com
+- LinkedIn: https://linkedin.com/in/ardian-idrizi
