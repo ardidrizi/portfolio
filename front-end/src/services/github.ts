@@ -46,6 +46,19 @@ type PinnedRepo = {
   repositoryTopics: { nodes: Array<{ topic: { name: string } }> }
 }
 
+type PublicRepo = {
+  name: string
+  description: string | null
+  html_url: string
+  homepage: string | null
+  stargazers_count: number
+  updated_at: string
+  owner: { login: string }
+  default_branch: string
+  topics?: string[]
+  fork: boolean
+}
+
 type CaseStudyPayload = {
   title?: string
   summary?: string
@@ -281,17 +294,55 @@ async function fetchPinnedRepos(token: string): Promise<PinnedRepo[]> {
   return (data.data?.user?.pinnedItems?.nodes ?? []).filter((repo: PinnedRepo) => !EXCLUDED_REPOS.has(repo.name.toLowerCase()))
 }
 
+async function fetchPublicRepos(): Promise<PinnedRepo[]> {
+  const response = await fetch(`https://api.github.com/users/${GITHUB_USERNAME}/repos?sort=updated&per_page=10`, {
+    headers: {
+      Accept: 'application/vnd.github+json',
+    },
+  })
+
+  if (!response.ok) {
+    throw new Error(`GitHub REST request failed with status ${response.status}`)
+  }
+
+  const repos = (await response.json()) as PublicRepo[]
+
+  return repos
+    .filter((repo) => !repo.fork)
+    .filter((repo) => !EXCLUDED_REPOS.has(repo.name.toLowerCase()))
+    .slice(0, 4)
+    .map((repo) => ({
+      name: repo.name,
+      description: repo.description,
+      url: repo.html_url,
+      homepageUrl: repo.homepage,
+      stargazerCount: repo.stargazers_count,
+      updatedAt: repo.updated_at,
+      owner: { login: repo.owner.login },
+      defaultBranchRef: { name: repo.default_branch },
+      repositoryTopics: {
+        nodes: (repo.topics ?? []).map((topic) => ({ topic: { name: topic } })),
+      },
+    }))
+}
+
 export async function fetchProjects(): Promise<{ projects: Project[]; notice: string | null }> {
   if (projectsCache) return { projects: projectsCache, notice: null }
   if (loadPromise) return loadPromise
 
   loadPromise = (async () => {
     const token = import.meta.env.VITE_GITHUB_TOKEN
-    if (!token) {
-      throw new Error('Missing VITE_GITHUB_TOKEN')
-    }
 
-    const sourceRepos = await fetchPinnedRepos(token)
+    let sourceRepos: PinnedRepo[] = []
+    if (token) {
+      try {
+        sourceRepos = await fetchPinnedRepos(token)
+      } catch {
+        sourceRepos = await fetchPublicRepos()
+      }
+    } else {
+      sourceRepos = await fetchPublicRepos()
+    }
 
     const mappedProjects = await Promise.all(
       sourceRepos.map(async (repo) => {
